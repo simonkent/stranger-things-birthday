@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Birthday Mystery for William</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Special+Elite&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #080808;
+      color: #ddd;
+      font-family: 'Special Elite', 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Film grain */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1000;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.04;
+    }
+
+    /* CRT scanlines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 999;
+      background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.09) 2px,rgba(0,0,0,0.09) 4px);
+    }
+
+    /* ===== LIGHTS ===== */
+    .lights-bar { background: #080808; padding-bottom: 8px; }
+    .wire       { height: 3px; background: #282828; }
+    .bulbs      { display: flex; justify-content: space-around; padding: 0 10px; }
+
+    .bulb-unit { display: flex; flex-direction: column; align-items: center; }
+    .bulb-stem { width: 2px; height: 8px; background: #333; }
+    .bulb-cap  { width: 18px; height: 5px; background: #3a3a3a; border-radius: 2px; margin-top: -2px; }
+
+    .bulb {
+      width: 17px; height: 23px;
+      border-radius: 50% 50% 40% 40%;
+      animation: bflicker var(--dur, 2s) var(--delay, 0s) infinite;
+    }
+
+    .c0 { background:#ff2222; box-shadow:0 0 8px #ff2222,0 0 18px rgba(255,34,34,.45); }
+    .c1 { background:#ff8800; box-shadow:0 0 8px #ff8800,0 0 18px rgba(255,136,0,.45); }
+    .c2 { background:#ffee00; box-shadow:0 0 8px #ffee00,0 0 18px rgba(255,238,0,.45); }
+    .c3 { background:#44ff44; box-shadow:0 0 8px #44ff44,0 0 18px rgba(68,255,68,.45); }
+    .c4 { background:#44aaff; box-shadow:0 0 8px #44aaff,0 0 18px rgba(68,170,255,.45); }
+    .c5 { background:#cc44ff; box-shadow:0 0 8px #cc44ff,0 0 18px rgba(204,68,255,.45); }
+    .c6 { background:#ff44aa; box-shadow:0 0 8px #ff44aa,0 0 18px rgba(255,68,170,.45); }
+    .c7 { background:#ff5500; box-shadow:0 0 8px #ff5500,0 0 18px rgba(255,85,0,.45); }
+
+    @keyframes bflicker {
+      0%,17%,19%,21%,48%,50%,100% { opacity:1; }
+      18%,20%,49%                  { opacity:.05; }
+    }
+
+    /* ===== LAYOUT ===== */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 36px 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .screen {
+      display: none;
+      max-width: 640px;
+      width: 100%;
+      text-align: center;
+      animation: fadeUp .7s ease both;
+    }
+    .screen.active { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(22px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ===== TYPE ===== */
+    .logo {
+      font-family: 'Creepster', Impact, sans-serif;
+      color: #cc0000;
+      text-shadow: 0 0 12px #cc0000, 0 0 40px #880000, 0 0 80px rgba(136,0,0,.3);
+      letter-spacing: 6px;
+      line-height: 1.05;
+    }
+    .logo-xl  { font-size: clamp(3rem, 9vw, 5.5rem); }
+    .logo-sm  { font-size: clamp(1rem, 3vw, 1.5rem); letter-spacing: 10px; }
+
+    .tag {
+      font-size: .68rem;
+      letter-spacing: 4px;
+      color: #484848;
+      text-transform: uppercase;
+      margin: 10px 0 30px;
+    }
+
+    /* ===== INTRO ===== */
+    .intro-body { color:#888; line-height:2; font-size:1rem; margin-bottom:10px; }
+    .intro-name { color:#ffcc00; font-size:1.5rem; letter-spacing:3px; text-shadow:0 0 14px rgba(255,204,0,.4); margin-bottom:10px; }
+    .intro-rule { color:#3a3a3a; font-size:.72rem; letter-spacing:4px; text-transform:uppercase; margin-bottom:36px; }
+
+    /* ===== PROGRESS ===== */
+    .progress { display:flex; gap:14px; justify-content:center; margin-bottom:28px; }
+    .dot { width:10px; height:10px; border-radius:50%; border:2px solid #2a2a2a; transition:all .4s; }
+    .dot.done   { background:#cc0000; border-color:#cc0000; box-shadow:0 0 6px #cc0000; }
+    .dot.active { border-color:#ffcc00; animation:dpulse 1.2s infinite; }
+
+    @keyframes dpulse {
+      0%,100% { box-shadow:0 0 4px #ffcc00; }
+      50%     { box-shadow:0 0 14px #ffcc00; }
+    }
+
+    /* ===== CARD ===== */
+    .card {
+      background: #0d0d0d;
+      border: 1px solid #1e1e1e;
+      border-radius: 6px;
+      padding: 30px 28px;
+      margin-bottom: 22px;
+      position: relative;
+      text-align: left;
+      box-shadow: 0 0 40px rgba(204,0,0,.05), inset 0 0 30px rgba(0,0,0,.5);
+    }
+
+    .clue-num {
+      font-size: .62rem;
+      letter-spacing: 4px;
+      color: #cc0000;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .clue-num::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, #330000, transparent);
+    }
+
+    .clue-body { font-size:1.05rem; line-height:2; color:#bbb; }
+    .clue-body em {
+      color:#ffcc00;
+      font-style:normal;
+      display:block;
+      margin-top:18px;
+      font-size:1.1rem;
+    }
+
+    /* ===== INPUT ===== */
+    .input-wrap { margin-top:22px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+
+    input[type=text] {
+      background: #080808;
+      border: 1px solid #2e2e2e;
+      color: #e0e0e0;
+      font-family: 'Special Elite', monospace;
+      font-size: 1.1rem;
+      letter-spacing: 3px;
+      padding: 13px 18px;
+      width: 100%;
+      max-width: 360px;
+      border-radius: 3px;
+      outline: none;
+      text-align: center;
+      transition: border-color .25s, box-shadow .25s;
+    }
+    input[type=text]:focus         { border-color:#444; }
+    input[type=text].state-ok      { border-color:#44cc44; box-shadow:0 0 10px rgba(68,204,68,.3); }
+    input[type=text].state-bad     { border-color:#cc2222; animation:shake .4s ease; }
+
+    @keyframes shake {
+      0%,100%{ transform:translateX(0); }
+      20%    { transform:translateX(-12px); }
+      40%    { transform:translateX(12px); }
+      60%    { transform:translateX(-8px); }
+      80%    { transform:translateX(8px); }
+    }
+
+    .feedback { min-height:18px; font-size:.8rem; letter-spacing:2px; text-transform:uppercase; }
+    .feedback.ok  { color:#44cc44; }
+    .feedback.err { color:#cc3333; }
+
+    /* ===== BUTTON ===== */
+    .btn {
+      background: transparent;
+      border: 2px solid #cc0000;
+      color: #ccc;
+      font-family: 'Special Elite', monospace;
+      font-size: .88rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      padding: 14px 36px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: color .3s, box-shadow .3s;
+    }
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: #cc0000;
+      transform: translateX(-100%);
+      transition: transform .3s;
+      z-index: -1;
+    }
+    .btn:hover            { color:#fff; text-shadow:0 0 8px rgba(255,255,255,.5); box-shadow:0 0 22px rgba(204,0,0,.4); }
+    .btn:hover::before    { transform:translateX(0); }
+
+    /* ===== REVEAL ===== */
+    .reveal-wrap { animation: revealIn 1s ease both; }
+
+    @keyframes revealIn {
+      0%  { opacity:0; transform:scale(.85); }
+      60% { transform:scale(1.02); }
+      100%{ opacity:1; transform:scale(1); }
+    }
+
+    .reveal-greeting { font-size:clamp(.9rem,2.5vw,1.2rem); letter-spacing:3px; color:#666; text-transform:uppercase; margin-bottom:4px; }
+    .reveal-name     { color:#ffcc00; text-shadow:0 0 14px rgba(255,204,0,.5); }
+
+    /* Glitch */
+    .glitch { position:relative; display:inline-block; }
+    .glitch::before, .glitch::after {
+      content: attr(data-text);
+      position: absolute;
+      top:0; left:0; width:100%; height:100%;
+      font-family: inherit;
+      font-size: inherit;
+      letter-spacing: inherit;
+      color: inherit;
+    }
+    .glitch::before {
+      color: #0ff;
+      clip-path: polygon(0 0,100% 0,100% 40%,0 40%);
+      transform: translate(-2px,0);
+      animation: ga 4s infinite step-start;
+    }
+    .glitch::after {
+      color: #f0f;
+      clip-path: polygon(0 60%,100% 60%,100% 100%,0 100%);
+      transform: translate(2px,0);
+      animation: gb 4s infinite step-start;
+    }
+    @keyframes ga {
+      0%,88%,100% { clip-path:polygon(0 0,100% 0,100% 40%,0 40%); transform:translate(0); }
+      89% { clip-path:polygon(0 8%,100% 8%,100% 42%,0 42%); transform:translate(-3px,1px); }
+      91% { clip-path:polygon(0 18%,100% 18%,100% 32%,0 32%); transform:translate(2px,-1px); }
+    }
+    @keyframes gb {
+      0%,88%,100% { clip-path:polygon(0 60%,100% 60%,100% 100%,0 100%); transform:translate(0); }
+      89% { clip-path:polygon(0 54%,100% 54%,100% 88%,0 88%); transform:translate(3px,-1px); }
+      91% { clip-path:polygon(0 64%,100% 64%,100% 96%,0 96%); transform:translate(-2px,2px); }
+    }
+
+    /* ===== TICKET ===== */
+    .ticket {
+      background: linear-gradient(160deg, #140000 0%, #0a0000 55%, #12000e 100%);
+      border: 2px solid #cc0000;
+      border-radius: 8px;
+      padding: 36px 32px;
+      margin: 28px 0;
+      position: relative;
+      box-shadow: 0 0 60px rgba(204,0,0,.2), 0 0 120px rgba(204,0,0,.07), inset 0 0 40px rgba(0,0,0,.4);
+    }
+    .ticket-inner {
+      position: absolute;
+      inset: 6px;
+      border: 1px solid rgba(204,0,0,.18);
+      border-radius: 5px;
+      pointer-events: none;
+    }
+    /* Punch holes */
+    .ticket::before, .ticket::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: #080808;
+      border: 2px solid #cc0000;
+    }
+    .ticket::before { top: -12px; }
+    .ticket::after  { bottom: -12px; }
+
+    .t-label { font-size:.62rem; letter-spacing:4px; color:#484848; text-transform:uppercase; margin-bottom:4px; }
+
+    .t-show {
+      font-family: 'Creepster', Impact, sans-serif;
+      color: #cc0000;
+      text-shadow: 0 0 14px #cc0000, 0 0 40px #660000;
+      letter-spacing: 5px;
+      line-height: 1.05;
+    }
+    .t-show-main { font-size:clamp(2.2rem,6.5vw,4rem); }
+    .t-show-sub  { font-size:clamp(.9rem,2.5vw,1.1rem); letter-spacing:7px; color:#888; text-transform:uppercase; margin-bottom:26px; margin-top:2px; }
+
+    .t-divider { border:none; border-top:1px dashed #2a0000; margin:18px 0; }
+
+    .t-value { font-size:clamp(1.2rem,3.5vw,1.9rem); color:#ffcc00; text-shadow:0 0 10px rgba(255,204,0,.4); letter-spacing:2px; margin-bottom:4px; }
+
+    .t-note { color:#484848; font-size:.88rem; line-height:2; letter-spacing:1px; margin-top:22px; }
+
+    .stars { color:#cc0000; font-size:1.1rem; letter-spacing:10px; text-shadow:0 0 8px #cc0000; }
+  </style>
+</head>
+<body>
+
+  <div class="lights-bar">
+    <div class="wire"></div>
+    <div class="bulbs" id="bulbs"></div>
+  </div>
+
+  <main>
+
+    <!-- INTRO -->
+    <div class="screen active" id="s0">
+      <div class="logo logo-xl">STRANGER<br>THINGS</div>
+      <div class="logo logo-sm" style="margin-top:6px;">∙ A BIRTHDAY MYSTERY ∙</div>
+      <div class="tag">For William — if he dares to enter</div>
+
+      <p class="intro-name">Happy Birthday, William.</p>
+      <p class="intro-body">
+        Deep within the darkness of Hawkins, Indiana,<br>a birthday secret is being kept from you.
+      </p>
+      <p class="intro-body" style="margin-bottom:20px;">
+        But before it can be revealed,<br>you must prove you belong in the Party.
+      </p>
+      <p class="intro-rule">Three clues. Three answers. One surprise.</p>
+
+      <button class="btn" onclick="go(1)">ENTER THE VOID</button>
+    </div>
+
+    <!-- CLUE 1 -->
+    <div class="screen" id="s1">
+      <div class="progress">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="card">
+        <div class="clue-num">Clue 001 — The World Below</div>
+        <div class="clue-body">
+          I exist alongside your world — a dark reflection of everything you know.
+          No warmth. No colour. No hope.<br><br>
+          Creatures from my depths have terrorised Hawkins for years.
+          Will Byers was dragged into me against his will.
+          Eleven reached through me to find the lost and the missing.<br><br>
+          I am beneath your feet right now, in the dark, waiting.
+          <em>What am I called?</em>
+        </div>
+        <div class="input-wrap">
+          <input type="text" id="i1" placeholder="Type your answer..." autocomplete="off">
+          <div class="feedback" id="f1"></div>
+        </div>
+      </div>
+      <button class="btn" onclick="check(1)">SUBMIT</button>
+    </div>
+
+    <!-- CLUE 2 -->
+    <div class="screen" id="s2">
+      <div class="progress">
+        <div class="dot done"></div>
+        <div class="dot active"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="card">
+        <div class="clue-num">Clue 002 — She Has No Name</div>
+        <div class="clue-body">
+          She was never given a birthday. She was never given a name.<br><br>
+          Raised in a cold, windowless laboratory, her mind was trained as a weapon.
+          She can slam doors without touching them, flip vans with a single thought,
+          and reach into other worlds with her eyes closed.<br><br>
+          She bleeds when she pushes too hard.
+          Her friends call her El. Dr Brenner called her his.
+          He gave her a number instead of a name.
+          <em>What was that number?</em>
+        </div>
+        <div class="input-wrap">
+          <input type="text" id="i2" placeholder="Type your answer..." autocomplete="off">
+          <div class="feedback" id="f2"></div>
+        </div>
+      </div>
+      <button class="btn" onclick="check(2)">SUBMIT</button>
+    </div>
+
+    <!-- CLUE 3 -->
+    <div class="screen" id="s3">
+      <div class="progress">
+        <div class="dot done"></div>
+        <div class="dot done"></div>
+        <div class="dot active"></div>
+      </div>
+      <div class="card">
+        <div class="clue-num">Clue 003 — Final</div>
+        <div class="clue-body">
+          This is your final clue. Read it carefully.<br><br>
+          Every monster has an origin.
+          Every darkness has a beginning.
+          Long before Will Byers disappeared into the dark,
+          long before any Gate was torn open beneath Hawkins,
+          long before anyone knew what lurked beneath their feet —<br><br>
+          Something came first.<br>
+          Something cast the very first shadow over everything that followed.<br><br>
+          Its name tells you exactly what it was.
+          <em>What was it called?</em>
+        </div>
+        <div class="input-wrap">
+          <input type="text" id="i3" placeholder="Type your answer..." autocomplete="off">
+          <div class="feedback" id="f3"></div>
+        </div>
+      </div>
+      <button class="btn" onclick="check(3)">SUBMIT</button>
+    </div>
+
+    <!-- REVEAL -->
+    <div class="screen" id="s4">
+      <div class="reveal-wrap">
+        <div class="stars">✦ ✦ ✦</div>
+        <br>
+        <p class="reveal-greeting">Happy Birthday, <span class="reveal-name">William</span></p>
+        <div class="logo logo-xl glitch" data-text="YOU CRACKED IT" style="margin:14px 0 4px;">YOU CRACKED IT</div>
+        <p class="tag">The mystery is solved. Here is your surprise.</p>
+
+        <div class="ticket">
+          <div class="ticket-inner"></div>
+
+          <div class="t-label">You have tickets to see</div>
+          <div class="t-show t-show-main">STRANGER<br>THINGS</div>
+          <div class="t-show t-show-sub">: The First Shadow</div>
+
+          <hr class="t-divider">
+
+          <div class="t-label">Date</div>
+          <div class="t-value">Sunday 6th September 2026</div>
+
+          <hr class="t-divider">
+
+          <div class="t-label">Format</div>
+          <div class="t-value" style="font-size:1.1rem; letter-spacing:3px; color:#999;">Live on Stage</div>
+
+          <div class="t-note">
+            The origin story. The prequel.<br>
+            The shadow that started everything.<br>
+            <span style="color:#cc0000; letter-spacing:2px;">Welcome to the beginning.</span>
+          </div>
+        </div>
+
+        <div class="stars">✦ ✦ ✦</div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Build lights
+    const bulbsEl = document.getElementById('bulbs');
+    const count = Math.max(14, Math.floor(window.innerWidth / 40));
+    for (let i = 0; i < count; i++) {
+      const dur   = (1.4 + Math.random() * 2.8).toFixed(2);
+      const delay = (Math.random() * 4).toFixed(2);
+      bulbsEl.innerHTML += `
+        <div class="bulb-unit">
+          <div class="bulb-stem"></div>
+          <div class="bulb c${i % 8}" style="--dur:${dur}s;--delay:${delay}s;"></div>
+          <div class="bulb-cap"></div>
+        </div>`;
+    }
+
+    const answers = {
+      1: ['the upside down', 'upside down'],
+      2: ['eleven', 'el', '11', '011', '0011'],
+      3: ['the first shadow', 'first shadow', 'stranger things the first shadow', 'stranger things: the first shadow'],
+    };
+
+    const hints = {
+      1: 'Think: the parallel world that lies beneath Hawkins...',
+      2: 'She is known by a number, not a name.',
+      3: 'Think about origins — what name tells you it came before everything?',
+    };
+
+    function check(q) {
+      const inp = document.getElementById('i' + q);
+      const fb  = document.getElementById('f' + q);
+      const val = inp.value.trim().toLowerCase();
+      if (!val) return;
+
+      if (answers[q].some(a => a === val)) {
+        inp.classList.remove('state-bad');
+        inp.classList.add('state-ok');
+        fb.className = 'feedback ok';
+        fb.textContent = '✓ Correct';
+        setTimeout(() => go(q + 1), 900);
+      } else {
+        inp.classList.remove('state-ok');
+        inp.classList.add('state-bad');
+        fb.className = 'feedback err';
+        fb.textContent = hints[q];
+        setTimeout(() => inp.classList.remove('state-bad'), 600);
+      }
+    }
+
+    function go(n) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      const next = document.getElementById('s' + n);
+      if (next) next.classList.add('active');
+    }
+
+    // Enter key
+    [1, 2, 3].forEach(q => {
+      document.getElementById('i' + q)
+        .addEventListener('keydown', e => { if (e.key === 'Enter') check(q); });
+    });
+  </script>
+</body>
+</html>
